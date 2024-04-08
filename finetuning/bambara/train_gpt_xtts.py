@@ -6,6 +6,7 @@ from TTS.config.shared_configs import BaseDatasetConfig
 from TTS.tts.datasets import load_tts_samples
 from TTS.tts.layers.xtts.trainer.gpt_trainer import GPTArgs, GPTTrainer, GPTTrainerConfig, XttsAudioConfig
 from TTS.utils.manage import ModelManager
+from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter
 
 # Logging parameters
 RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
@@ -25,7 +26,7 @@ GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
 
 # Define here the dataset that you want to use for the fine-tuning on.
 config_dataset = BaseDatasetConfig(
-    formatter="ljspeech",
+    formatter=bambara_dataset_formatter,
     dataset_name="bambara_tts",
     path="./dataset",
     meta_file_train="../dataset/metadata.txt",
@@ -59,15 +60,16 @@ TOKENIZER_FILE_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/voca
 XTTS_CHECKPOINT_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/model.pth"
 
 # XTTS transfer learning parameters: You we need to provide the paths of XTTS model checkpoint that you want to do the fine tuning.
-TOKENIZER_FILE = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(TOKENIZER_FILE_LINK))  # vocab.json file
+# TOKENIZER_FILE = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(TOKENIZER_FILE_LINK))  # vocab.json file
+TOKENIZER_FILE = "./saved/vocab.json"  # vocab.json file
 XTTS_CHECKPOINT = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(XTTS_CHECKPOINT_LINK))  # model.pth file
 
 # download XTTS v2.0 files if needed
-if not os.path.isfile(TOKENIZER_FILE) or not os.path.isfile(XTTS_CHECKPOINT):
-    print(" > Downloading XTTS v2.0 files!")
-    ModelManager._download_model_files(
-        [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
-    )
+# if not os.path.isfile(TOKENIZER_FILE) or not os.path.isfile(XTTS_CHECKPOINT):
+#     print(" > Downloading XTTS v2.0 files!")
+#     ModelManager._download_model_files(
+#         [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
+#     )
 
 
 # Training sentences generations
@@ -80,14 +82,19 @@ LANGUAGE = config_dataset.language
 def main():
     # init args and config
     model_args = GPTArgs(
+        # max_conditioning_length=132300,  # 6 secs
+        # min_conditioning_length=66150,  # 3 secs
+        # debug_loading_failures=False,
+        # max_wav_length=1_160_130,  # ~52.6 seconds
+        # max_text_length=583,
         max_conditioning_length=132300,  # 6 secs
         min_conditioning_length=66150,  # 3 secs
         debug_loading_failures=False,
-        max_wav_length=1_160_130,  # ~52.6 seconds
-        max_text_length=583,
+        max_wav_length=255995,  # ~11.6 seconds
+        max_text_length=200,
         mel_norm_file=MEL_NORM_FILE,
         dvae_checkpoint=DVAE_CHECKPOINT,
-        xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
+        # xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
         tokenizer_file=TOKENIZER_FILE,
         gpt_num_audio_tokens=1026,
         gpt_start_audio_token=1024,
@@ -130,6 +137,7 @@ def main():
         lr_scheduler="MultiStepLR",
         # it was adjusted accordly for the new step scheme
         lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
+        languages=["bm"],
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",
@@ -145,15 +153,18 @@ def main():
     )
 
     # init the model from config
-    model = GPTTrainer.init_from_config(config)
+    model = BambaraGPTTrainer.init_from_config(config)
 
     # load training samples
     train_samples, eval_samples = load_tts_samples(
         DATASETS_CONFIG_LIST,
         eval_split=True,
+        formatter=bambara_dataset_formatter,
         eval_split_max_size=config.eval_split_max_size,
         eval_split_size=config.eval_split_size,
     )
+
+    print(eval_samples)
 
     # init the trainer and 🚀
     trainer = Trainer(

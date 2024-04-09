@@ -17,6 +17,79 @@ from tokenizers import Tokenizer
 
 from TTS.tts.layers.xtts.zh_num2words import TextNorm as zh_num2words
 
+class VoiceBambaraTextPreprocessor:
+    def preprocess_batch(self, texts):
+        return [self.preprocess(text) for text in texts]
+
+    def preprocess(self, text: str) -> str:
+        text = text.lower()
+        text = self.expand_number(text)
+
+        return text
+
+    def expand_number(self, text):
+        """
+        Normalize Bambara text for TTS by replacing numerical figures with their word equivalents.
+
+        Args:
+        text (str): The text to be normalized.
+
+        Returns:
+        str: The normalized Bambara text.
+        """
+
+        # A regex pattern to match all numbers
+        number_pattern = re.compile(r'\b\d+\b')
+
+        # Function to replace each number with its Bambara text
+        def replace_number_with_text(match):
+            number = int(match.group())
+            return self.number_to_bambara(number)
+
+        # Replace each number in the text with its Bambara word equivalent
+        normalized_text = number_pattern.sub(replace_number_with_text, text)
+
+        return normalized_text
+
+    def number_to_bambara(self, n):
+
+        """
+        Convert a number into its textual representation in Bambara using recursion.
+        Args:
+        n (int): The number to be converted.
+        Returns:
+        str: The number expressed in Bambara text.
+        Examples:
+        >>> number_to_bambara(123)
+        'kɛmɛ ni mugan ni saba'
+        Notes:
+        This function assumes that 'n' is a non-negative integer.
+        """
+
+        # Bambara numbering rules
+        units = ["", "kɛlɛn", "fila", "saba", "naani", "duuru", "wɔrɔ", "wòlonwula", "sɛɛgin", "kɔnɔntɔn"]
+        tens = ["", "tan", "mugan", "bisaba", "binaani", "biduuru", "biwɔrɔ", "biwòlonfila", "bisɛɛgin", "bikɔnɔntɔn"]
+        hundreds = ["", "kɛmɛ"]
+        thousands = ["", "waga"]
+        millions = ["", "milyɔn"]
+
+        # Handle zero explicitly
+        if n == 0:
+            return ""  # bambara does not support zero
+
+        if n < 10:
+            return units[n]
+        elif n < 100:
+            return tens[n // 10] + (" ni " + self.number_to_bambara(n % 10) if n % 10 > 0 else "")
+        elif n < 1000:
+            return hundreds[1] + (" " + self.number_to_bambara(n // 100) if n >= 200 else "") + (
+                " ni " + self.number_to_bambara(n % 100) if n % 100 > 0 else "")
+        elif n < 1_000_000:
+            return thousands[1] + " " + self.number_to_bambara(n // 1000) + (
+                " ni " + self.number_to_bambara(n % 1000) if n % 1000 > 0 else "")
+        else:
+            return millions[1] + " " + self.number_to_bambara(n // 1_000_000) + (
+                " ni " + self.number_to_bambara(n % 1_000_000) if n % 1_000_000 > 0 else "")
 
 def get_spacy_lang(lang):
     if lang == "zh":
@@ -592,6 +665,7 @@ DEFAULT_VOCAB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "
 class VoiceBpeTokenizer:
     def __init__(self, vocab_file=None):
         self.tokenizer = None
+        self.bambara_preprocessor = VoiceBambaraTextPreprocessor()
         if vocab_file is not None:
             self.tokenizer = Tokenizer.from_file(vocab_file)
         self.char_limits = {
@@ -611,6 +685,7 @@ class VoiceBpeTokenizer:
             "ja": 71,
             "hu": 224,
             "ko": 95,
+            "bm": 250,
         }
 
     @cached_property
@@ -638,6 +713,9 @@ class VoiceBpeTokenizer:
             txt = japanese_cleaners(txt, self.katsu)
         elif lang == "hi":
             # @manmay will implement this
+            txt = basic_cleaners(txt)
+        elif lang == "bm":
+            txt = self.bambara_preprocessor.preprocess(txt)
             txt = basic_cleaners(txt)
         else:
             raise NotImplementedError(f"Language '{lang}' is not supported.")

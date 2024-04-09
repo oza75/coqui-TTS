@@ -30,7 +30,6 @@ config_dataset = BaseDatasetConfig(
     dataset_name="bambara_tts",
     path="./dataset",
     meta_file_train="../dataset/metadata.txt",
-    language="bm",
 )
 
 # Add here the configs of the datasets

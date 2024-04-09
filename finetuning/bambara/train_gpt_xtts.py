@@ -10,7 +10,7 @@ from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter
 
 # Logging parameters
 RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
-PROJECT_NAME = "BAM_FINE_TUNING"
+PROJECT_NAME = "BAM_FINE_TUNING_2"
 DASHBOARD_LOGGER = "wandb"
 LOGGER_URI = None
 
@@ -20,8 +20,8 @@ OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run", "trai
 # Training Parameters
 OPTIMIZER_WD_ONLY_ON_WEIGHTS = True  # for multi-gpu training please make it False
 START_WITH_EVAL = True  # if True it will star with evaluation
-BATCH_SIZE = 3  # set here the batch size
-GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
+BATCH_SIZE = 8  # set here the batch size
+GRAD_ACUMM_STEPS = 32  # set here the grad accumulation steps
 # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
 
 # Define here the dataset that you want to use for the fine-tuning on.
@@ -64,12 +64,12 @@ XTTS_CHECKPOINT_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/mod
 TOKENIZER_FILE = "./saved/vocab.json"  # vocab.json file
 XTTS_CHECKPOINT = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(XTTS_CHECKPOINT_LINK))  # model.pth file
 
-# download XTTS v2.0 files if needed
-# if not os.path.isfile(TOKENIZER_FILE) or not os.path.isfile(XTTS_CHECKPOINT):
-#     print(" > Downloading XTTS v2.0 files!")
-#     ModelManager._download_model_files(
-#         [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
-#     )
+#download XTTS v2.0 files if needed
+if not os.path.isfile(XTTS_CHECKPOINT):
+    print(" > Downloading XTTS v2.0 files!")
+    ModelManager._download_model_files(
+        [XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
+    )
 
 
 # Training sentences generations
@@ -94,7 +94,7 @@ def main():
         max_text_length=200,
         mel_norm_file=MEL_NORM_FILE,
         dvae_checkpoint=DVAE_CHECKPOINT,
-        # xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
+        xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
         tokenizer_file=TOKENIZER_FILE,
         gpt_num_audio_tokens=1026,
         gpt_start_audio_token=1024,
@@ -106,6 +106,7 @@ def main():
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
+        epochs=100,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,
@@ -163,8 +164,6 @@ def main():
         eval_split_max_size=config.eval_split_max_size,
         eval_split_size=config.eval_split_size,
     )
-
-    print(eval_samples)
 
     # init the trainer and 🚀
     trainer = Trainer(

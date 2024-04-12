@@ -104,7 +104,7 @@ def main():
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
-        epochs=10,
+        epochs=18,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,
@@ -153,9 +153,29 @@ def main():
                 "language": 'bm',
             },
             {
+                "text": "Silamɛ dannabaaw Burkina Faso la, u ye Eid El Fitr seli kɛ seli la min kɛra sun kalo laban don na .",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'bm',
+            },
+            {
                 "text": "le texte devra attendre l’avis du Conseil constitutionnel avant son examen à l’Assemblée.",
                 "speaker_wav": SPEAKER_REFERENCE,
                 "language": 'fr',
+            },
+            {
+                "text": "Below are benchmarks for downsampling and upsampling waveforms between two pairs of sampling rates.",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'en',
+            },
+            {
+                "text": "La convivencia se asienta en Euskadi con la asignatura pendiente de la memoria",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'es',
+            },
+            {
+                "text": "Quei mariuoli di troppo alla corte dell’ex sceriffo. Così il sistema Emiliano sta affondando la Puglia",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'it',
             },
             {
                 "text": "Les Insoumis ont obtenu ce mardi 9 avril que le texte soit retiré de l’ordre du jour de l’Assemblée nationale en attendant un avis du Conseil constitutionnel.",

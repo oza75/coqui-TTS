@@ -72,8 +72,13 @@ if not os.path.isfile(XTTS_CHECKPOINT):
 
 
 # Training sentences generations
+# speaker reference to be used in training test sentences
 SPEAKER_REFERENCE = [
-    "./reference_speaker.wav"   # speaker reference to be used in training test sentences
+    "./reference_speaker_male_1.wav",
+    "./reference_speaker_male_2.wav",
+    "./reference_speaker_male_3.wav",
+    "./reference_speaker_female_1.wav",
+    "./reference_speaker_female_2.wav",
 ]
 
 
@@ -99,7 +104,7 @@ def main():
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
-        epochs=60,
+        epochs=10,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,

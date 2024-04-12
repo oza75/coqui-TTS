@@ -74,7 +74,7 @@ if not os.path.isfile(XTTS_CHECKPOINT):
 
 # Training sentences generations
 SPEAKER_REFERENCE = [
-    "./reference_speaker.wav"  # speaker reference to be used in training test sentences
+    "./reference_speaker_male_1.wav"  # speaker reference to be used in training test sentences
 ]
 LANGUAGE = config_dataset.language
 

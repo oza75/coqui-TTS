@@ -11,7 +11,7 @@ from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter
 # Logging parameters
 RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
 PROJECT_NAME = "BAM_FINE_TUNING_3"
-DASHBOARD_LOGGER = "wandb"
+DASHBOARD_LOGGER = "wandbld"
 LOGGER_URI = None
 
 # Set here the path that the checkpoints will be saved. Default: ./run/training/
@@ -75,7 +75,6 @@ if not os.path.isfile(XTTS_CHECKPOINT):
 SPEAKER_REFERENCE = [
     "./reference_speaker.wav"   # speaker reference to be used in training test sentences
 ]
-LANGUAGE = config_dataset.language
 
 
 def main():
@@ -136,18 +135,28 @@ def main():
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",
                 "speaker_wav": SPEAKER_REFERENCE,
-                "language": LANGUAGE,
+                "language": 'bm',
             },
             {
                 "text": "Ni sumaya furakɛli daminɛna, an ka kan ka to ka fura ta ka taa ɲɛ, walima ka to ka pikiri ni sɔrɔmuw kɛ ka taa ɲɛ fo sumaya ka ban pew.",
                 "speaker_wav": SPEAKER_REFERENCE,
-                "language": LANGUAGE,
+                "language": 'bm',
             },
             {
                 "text": "A ko kɛra degunba ye jamanadenw ma kɛrɛnkɛrɛnna demisɛn finitiniw ni mɔgɔ kɔrɔbaw.",
                 "speaker_wav": SPEAKER_REFERENCE,
-                "language": LANGUAGE,
-            }
+                "language": 'bm',
+            },
+            {
+                "text": "le texte devra attendre l’avis du Conseil constitutionnel avant son examen à l’Assemblée.",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'fr',
+            },
+            {
+                "text": "Les Insoumis ont obtenu ce mardi 9 avril que le texte soit retiré de l’ordre du jour de l’Assemblée nationale en attendant un avis du Conseil constitutionnel.",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": 'fr',
+            },
         ],
     )
 

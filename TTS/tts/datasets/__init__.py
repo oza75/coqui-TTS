@@ -59,7 +59,7 @@ def split_dataset(items, eval_split_max_size=None, eval_split_size=0.01):
 def add_extra_keys(metadata, language, dataset_name):
     for item in metadata:
         # add language name
-        item["language"] = language
+        # item["language"] = language
         # add unique audio name
         relfilepath = os.path.splitext(os.path.relpath(item["audio_file"], item["root_path"]))[0]
         audio_unique_name = f"{dataset_name}#{relfilepath}"

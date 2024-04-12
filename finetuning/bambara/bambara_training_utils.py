@@ -20,7 +20,8 @@ def bambara_dataset_formatter(root_path, meta_file, **kwargs):  # pylint: disabl
             wav_file = os.path.join(root_path, "wavs", cols[0] + ".wav")
             text = cols[2]
             speaker_name = f"speaker_{cols[3]}".replace("\n", "")
-            items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "root_path": root_path})
+            lang = f"{cols[4]}".replace("\n", "") if len(cols) > 4  else 'bm'
+            items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "language": lang, "root_path": root_path})
     return items
 
 
@@ -141,7 +142,7 @@ class BambaraGPTTrainer(GPTTrainer):
         self.xtts.tokenizer = VoiceBambaraTokenizer(self.args.tokenizer_file)
         # init gpt encoder and hifigan decoder
         self.xtts.init_models()
-        
+
     @staticmethod
     def init_from_config(config: "GPTTrainerConfig", samples: Union[List[List], List[Dict]] = None):
         """Initiate model from config

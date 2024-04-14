@@ -11,7 +11,7 @@ from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter
 # Logging parameters
 RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
 PROJECT_NAME = "BAM_FINE_TUNING_3"
-DASHBOARD_LOGGER = "wandbld"
+DASHBOARD_LOGGER = "wandb"
 LOGGER_URI = None
 
 # Set here the path that the checkpoints will be saved. Default: ./run/training/

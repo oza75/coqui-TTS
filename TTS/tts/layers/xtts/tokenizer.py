@@ -17,6 +17,7 @@ from tokenizers import Tokenizer
 
 from TTS.tts.layers.xtts.zh_num2words import TextNorm as zh_num2words
 
+
 class VoiceBambaraTextPreprocessor:
     def preprocess_batch(self, texts):
         return [self.preprocess(text) for text in texts]
@@ -24,8 +25,37 @@ class VoiceBambaraTextPreprocessor:
     def preprocess(self, text: str) -> str:
         text = text.lower()
         text = self.expand_number(text)
+        text = self.transliterate_bambara(text)
 
         return text
+
+    def transliterate_bambara(self, text):
+        """
+        Transliterate Bambara text using a specified mapping of special characters.
+
+        Parameters:
+        - text (str): The original Bambara text.
+
+        Returns:
+        - str: The transliterated text.
+        """
+        bambara_transliteration = {
+            'ɲ': 'ny',
+            'ɛ': 'è',
+            'ɔ': 'o',
+            'ŋ': 'ng',
+            'ɟ': 'j',
+            'ʔ': "'",
+            'ɣ': 'gh',
+            'ʃ': 'sh',
+            'ߒ': 'n',
+            'ߎ': "u",
+        }
+
+        # Perform the transliteration
+        transliterated_text = "".join(bambara_transliteration.get(char, char) for char in text)
+
+        return transliterated_text
 
     def expand_number(self, text):
         """
@@ -91,6 +121,7 @@ class VoiceBambaraTextPreprocessor:
             return millions[1] + " " + self.number_to_bambara(n // 1_000_000) + (
                 " ni " + self.number_to_bambara(n % 1_000_000) if n % 1_000_000 > 0 else "")
 
+
 def get_spacy_lang(lang):
     if lang == "zh":
         return Chinese()
@@ -122,11 +153,11 @@ def split_sentence(text, lang, text_split_length=250):
             elif len(str(sentence)) > text_split_length:
                 # if the current sentence is greater than the text_split_length
                 for line in textwrap.wrap(
-                    str(sentence),
-                    width=text_split_length,
-                    drop_whitespace=True,
-                    break_on_hyphens=False,
-                    tabsize=1,
+                        str(sentence),
+                        width=text_split_length,
+                        drop_whitespace=True,
+                        break_on_hyphens=False,
+                        tabsize=1,
                 ):
                     text_splits.append(str(line))
             else:

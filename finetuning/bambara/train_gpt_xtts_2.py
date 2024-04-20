@@ -104,7 +104,7 @@ def main():
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
-        epochs=18,
+        epochs=20,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,
@@ -131,8 +131,8 @@ def main():
         # Optimizer values like tortoise, pytorch implementation with modifications to not apply WD to non-weight parameters.
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
-        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2},
-        lr=5e-06,  # learning rate
+        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 2e-2},
+        lr=3e-06,  # learning rate
         lr_scheduler="MultiStepLR",
         # it was adjusted accordly for the new step scheme
         lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},

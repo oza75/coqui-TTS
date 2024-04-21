@@ -22,8 +22,8 @@ flask>=2.0.1
 # deps for inference
 pysbd>=0.3.4
 # deps for notebooks
-umap-learn>=0.5.1
-pandas>=1.4,<2.0
+# umap-learn>=0.5.1
+# pandas>=1.4,<2.0
 # deps for training
 matplotlib>=3.7.0
 # coqui stack

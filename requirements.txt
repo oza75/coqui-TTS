@@ -17,15 +17,8 @@ pyyaml>=6.0
 fsspec>=2023.6.0 # <= 2023.9.1 makes aux tests fail
 aiohttp>=3.8.1
 packaging>=23.1
-# deps for examples
-flask>=2.0.1
 # deps for inference
 pysbd>=0.3.4
-# deps for notebooks
-# umap-learn>=0.5.1
-# pandas>=1.4,<2.0
-# deps for training
-matplotlib>=3.7.0
 # coqui stack
 trainer>=0.0.32
 # config management

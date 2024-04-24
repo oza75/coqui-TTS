@@ -82,7 +82,8 @@ class XTTSDataset(torch.utils.data.Dataset):
         for sample in self.samples:
             try:
                 tseq, _, wav, _, _, _ = self.load_item(sample)
-            except:
+            except Exception as e:
+                raise e
                 continue
             # Basically, this audio file is nonexistent or too long to be supported by the dataset.
             if (
@@ -96,7 +97,7 @@ class XTTSDataset(torch.utils.data.Dataset):
         print(" > Total eval samples after filtering:", len(self.samples))
 
     def get_text(self, text, lang):
-        tokens = self.tokenizer.encode(text, lang)
+        tokens = self.tokenizer.encode(text, lang, transliterate_bambara=self.config.transliterate_bambara)
         tokens = torch.IntTensor(tokens)
         assert not torch.any(tokens == 1), f"UNK token found in {text} -> {self.tokenizer.decode(tokens)}"
         # The stop token should always be sacred.

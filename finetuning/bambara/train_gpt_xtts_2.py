@@ -6,7 +6,7 @@ from TTS.config.shared_configs import BaseDatasetConfig
 from TTS.tts.datasets import load_tts_samples
 from TTS.tts.layers.xtts.trainer.gpt_trainer import GPTArgs, GPTTrainer, GPTTrainerConfig, XttsAudioConfig
 from TTS.utils.manage import ModelManager
-from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter
+from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter, build_reference_audios_dict
 
 # Logging parameters
 RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
@@ -73,13 +73,7 @@ if not os.path.isfile(XTTS_CHECKPOINT):
 
 # Training sentences generations
 # speaker reference to be used in training test sentences
-SPEAKER_REFERENCE = [
-    "./reference_speaker_male_1.wav",
-    "./reference_speaker_male_2.wav",
-    "./reference_speaker_male_3.wav",
-    "./reference_speaker_female_1.wav",
-    "./reference_speaker_female_2.wav",
-]
+SPEAKER_REFERENCES = build_reference_audios_dict("./reference_audios")
 
 
 def main():
@@ -104,7 +98,7 @@ def main():
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
-        epochs=20,
+        epochs=40,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,
@@ -131,55 +125,56 @@ def main():
         # Optimizer values like tortoise, pytorch implementation with modifications to not apply WD to non-weight parameters.
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
-        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 2e-2},
-        lr=3e-06,  # learning rate
+        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2},
+        lr=8e-06,  # learning rate
         lr_scheduler="MultiStepLR",
         # it was adjusted accordly for the new step scheme
         lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
+        transliterate_bambara=False,
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['bm'][0],
                 "language": 'bm',
             },
             {
                 "text": "Ni sumaya furakɛli daminɛna, an ka kan ka to ka fura ta ka taa ɲɛ, walima ka to ka pikiri ni sɔrɔmuw kɛ ka taa ɲɛ fo sumaya ka ban pew.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['bm'][1],
                 "language": 'bm',
             },
             {
                 "text": "A ko kɛra degunba ye jamanadenw ma kɛrɛnkɛrɛnna demisɛn finitiniw ni mɔgɔ kɔrɔbaw.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['bm'][2],
                 "language": 'bm',
             },
             {
                 "text": "Silamɛ dannabaaw Burkina Faso la, u ye Eid El Fitr seli kɛ seli la min kɛra sun kalo laban don na .",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['bm'][3],
                 "language": 'bm',
             },
             {
                 "text": "le texte devra attendre l’avis du Conseil constitutionnel avant son examen à l’Assemblée.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['fr'][0],
                 "language": 'fr',
             },
             {
                 "text": "Below are benchmarks for downsampling and upsampling waveforms between two pairs of sampling rates.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['en'][0],
                 "language": 'en',
             },
             {
                 "text": "La convivencia se asienta en Euskadi con la asignatura pendiente de la memoria",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['es'][0],
                 "language": 'es',
             },
             {
                 "text": "Quei mariuoli di troppo alla corte dell’ex sceriffo. Così il sistema Emiliano sta affondando la Puglia",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['it'][0],
                 "language": 'it',
             },
             {
                 "text": "Les Insoumis ont obtenu ce mardi 9 avril que le texte soit retiré de l’ordre du jour de l’Assemblée nationale en attendant un avis du Conseil constitutionnel.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['fr'][0],
                 "language": 'fr',
             },
         ],

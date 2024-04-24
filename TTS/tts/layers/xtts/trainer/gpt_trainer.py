@@ -29,6 +29,7 @@ class GPTTrainerConfig(XttsConfig):
     weighted_loss_attrs: dict = field(default_factory=lambda: {})
     weighted_loss_multipliers: dict = field(default_factory=lambda: {})
     test_sentences: List[dict] = field(default_factory=lambda: [])
+    transliterate_bambara: bool = False
 
 
 @dataclass
@@ -105,11 +106,11 @@ class GPTTrainer(BaseTTS):
 
             # edit checkpoint if the number of tokens is changed to ensures the better transfer learning possible
             if (
-                "text_embedding.weight" in gpt_checkpoint
-                and gpt_checkpoint["text_embedding.weight"].shape != self.xtts.gpt.text_embedding.weight.shape
+                    "text_embedding.weight" in gpt_checkpoint
+                    and gpt_checkpoint["text_embedding.weight"].shape != self.xtts.gpt.text_embedding.weight.shape
             ):
                 num_new_tokens = (
-                    self.xtts.gpt.text_embedding.weight.shape[0] - gpt_checkpoint["text_embedding.weight"].shape[0]
+                        self.xtts.gpt.text_embedding.weight.shape[0] - gpt_checkpoint["text_embedding.weight"].shape[0]
                 )
                 print(f" > Loading checkpoint with {num_new_tokens} additional tokens.")
 
@@ -247,7 +248,7 @@ class GPTTrainer(BaseTTS):
         return {"audios": test_audios}
 
     def test_log(
-        self, outputs: dict, logger: "Logger", assets: dict, steps: int  # pylint: disable=unused-argument
+            self, outputs: dict, logger: "Logger", assets: dict, steps: int  # pylint: disable=unused-argument
     ) -> None:
         logger.test_audios(steps, outputs["audios"], self.args.output_sample_rate)
 
@@ -335,9 +336,9 @@ class GPTTrainer(BaseTTS):
 
     @torch.no_grad()
     def inference(
-        self,
-        x,
-        aux_input=None,
+            self,
+            x,
+            aux_input=None,
     ):  # pylint: disable=dangerous-default-value
         return None
 
@@ -351,14 +352,14 @@ class GPTTrainer(BaseTTS):
         return batch_sampler
 
     def get_data_loader(
-        self,
-        config: Coqpit,
-        assets: Dict,
-        is_eval: bool,
-        samples: Union[List[Dict], List[List]],
-        verbose: bool,
-        num_gpus: int,
-        rank: int = None,
+            self,
+            config: Coqpit,
+            assets: Dict,
+            is_eval: bool,
+            samples: Union[List[Dict], List[List]],
+            verbose: bool,
+            num_gpus: int,
+            rank: int = None,
     ) -> "DataLoader":  # pylint: disable=W0613
         if is_eval and not config.run_eval:
             loader = None
@@ -391,7 +392,7 @@ class GPTTrainer(BaseTTS):
                 loader = DataLoader(
                     dataset,
                     sampler=sampler,
-                    batch_size = config.eval_batch_size if is_eval else config.batch_size,
+                    batch_size=config.eval_batch_size if is_eval else config.batch_size,
                     collate_fn=dataset.collate_fn,
                     num_workers=config.num_eval_loader_workers if is_eval else config.num_loader_workers,
                     pin_memory=False,
@@ -471,14 +472,14 @@ class GPTTrainer(BaseTTS):
         return get_scheduler(self.config.lr_scheduler, self.config.lr_scheduler_params, optimizer)
 
     def load_checkpoint(
-        self,
-        config,
-        checkpoint_path,
-        eval=False,
-        strict=True,
-        cache_storage="/tmp/tts_cache",
-        target_protocol="s3",
-        target_options={"anon": True},
+            self,
+            config,
+            checkpoint_path,
+            eval=False,
+            strict=True,
+            cache_storage="/tmp/tts_cache",
+            target_protocol="s3",
+            target_options={"anon": True},
     ):  # pylint: disable=unused-argument, disable=W0201, disable=W0102, redefined-builtin
         """Load the model checkpoint and setup for training or inference"""
 

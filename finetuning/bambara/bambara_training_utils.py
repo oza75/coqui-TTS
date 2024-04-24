@@ -8,6 +8,36 @@ from TTS.tts.layers.xtts.trainer.gpt_trainer import GPTTrainer
 from coqpit import Coqpit
 from tqdm import tqdm
 
+def build_reference_audios_dict(directory):
+    """
+    Builds a dictionary with language codes as keys. Each key contains a list of lists of audio files,
+    where each list corresponds to a different speaker within that language.
+
+    Args:
+    directory (str): The root directory containing language code subdirectories and speaker directories.
+
+    Returns:
+    dict: A dictionary with language codes as keys and a list of lists of audio file paths as values.
+    """
+    audio_dict = {}
+
+    # Iterate over each language code directory in the root directory
+    for lang_code in os.listdir(directory):
+        lang_path = os.path.join(directory, lang_code)
+        if os.path.isdir(lang_path):  # Ensure it's a directory
+            speakers_files = []  # List to hold lists of files for each speaker in this language
+
+            # Iterate over each speaker directory within the language code directory
+            for speaker in os.listdir(lang_path):
+                speaker_path = os.path.join(lang_path, speaker)
+                if os.path.isdir(speaker_path):  # Ensure it's a directory
+                    # List all audio files in the speaker directory
+                    speaker_files = [os.path.join(speaker_path, f) for f in os.listdir(speaker_path) if f.endswith('.wav')]
+                    speakers_files.append(speaker_files)
+
+            audio_dict[lang_code] = speakers_files
+
+    return audio_dict
 
 def bambara_dataset_formatter(root_path, meta_file, **kwargs):  # pylint: disable=unused-argument
     """Normalizes the LJSpeech meta data file to TTS format

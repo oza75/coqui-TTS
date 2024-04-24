@@ -22,10 +22,12 @@ class VoiceBambaraTextPreprocessor:
     def preprocess_batch(self, texts):
         return [self.preprocess(text) for text in texts]
 
-    def preprocess(self, text: str) -> str:
+    def preprocess(self, text: str, transliterate: bool = False) -> str:
         text = text.lower()
         text = self.expand_number(text)
-        text = self.transliterate_bambara(text)
+
+        if transliterate:
+            text = self.transliterate_bambara(text)
 
         return text
 
@@ -733,7 +735,7 @@ class VoiceBpeTokenizer:
                 f"[!] Warning: The text length exceeds the character limit of {limit} for language '{lang}', this might cause truncated audio."
             )
 
-    def preprocess_text(self, txt, lang):
+    def preprocess_text(self, txt, lang, transliterate: bool = False):
         if lang in {"ar", "cs", "de", "en", "es", "fr", "hu", "it", "nl", "pl", "pt", "ru", "tr", "zh", "ko"}:
             txt = multilingual_cleaners(txt, lang)
             if lang == "zh":
@@ -746,16 +748,16 @@ class VoiceBpeTokenizer:
             # @manmay will implement this
             txt = basic_cleaners(txt)
         elif lang == "bm":
-            txt = self.bambara_preprocessor.preprocess(txt)
+            txt = self.bambara_preprocessor.preprocess(txt, transliterate=transliterate)
             txt = basic_cleaners(txt)
         else:
             raise NotImplementedError(f"Language '{lang}' is not supported.")
         return txt
 
-    def encode(self, txt, lang):
+    def encode(self, txt, lang, transliterate_bambara: bool = False):
         lang = lang.split("-")[0]  # remove the region
         self.check_input_length(txt, lang)
-        txt = self.preprocess_text(txt, lang)
+        txt = self.preprocess_text(txt, lang, transliterate=transliterate_bambara)
         lang = "zh-cn" if lang == "zh" else lang
         txt = f"[{lang}]{txt}"
         txt = txt.replace(" ", "[SPACE]")

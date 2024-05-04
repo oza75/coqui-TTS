@@ -9,7 +9,7 @@ from TTS.utils.manage import ModelManager
 from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter, build_reference_audios_dict
 
 # Logging parameters
-RUN_NAME = "GPT_XTTS_v2.0_BAM_FT"
+RUN_NAME = "xtts_lr_8e-06_epochs_20"
 PROJECT_NAME = "BAM_FINE_TUNING_3"
 DASHBOARD_LOGGER = "wandb"
 LOGGER_URI = None
@@ -30,6 +30,7 @@ config_dataset = BaseDatasetConfig(
     dataset_name="bambara_tts",
     path="./dataset",
     meta_file_train="../dataset/metadata.txt",
+    meta_file_val="../dataset/metadata_val.txt",
 )
 
 # Add here the configs of the datasets
@@ -41,8 +42,8 @@ os.makedirs(CHECKPOINTS_OUT_PATH, exist_ok=True)
 
 
 # DVAE files
-DVAE_CHECKPOINT_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/dvae.pth"
-MEL_NORM_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/mel_stats.pth"
+DVAE_CHECKPOINT_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/dvae.pth"
+MEL_NORM_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/mel_stats.pth"
 
 # Set the path to the downloaded files
 DVAE_CHECKPOINT = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(DVAE_CHECKPOINT_LINK))
@@ -55,19 +56,19 @@ if not os.path.isfile(DVAE_CHECKPOINT) or not os.path.isfile(MEL_NORM_FILE):
 
 
 # Download XTTS v2.0 checkpoint if needed
-TOKENIZER_FILE_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/vocab.json"
-XTTS_CHECKPOINT_LINK = "https://coqui.gateway.scarf.sh/hf-coqui/XTTS-v2/main/model.pth"
+TOKENIZER_FILE_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/vocab.json"
+XTTS_CHECKPOINT_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/model.pth"
 
 # XTTS transfer learning parameters: You we need to provide the paths of XTTS model checkpoint that you want to do the fine tuning.
-# TOKENIZER_FILE = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(TOKENIZER_FILE_LINK))  # vocab.json file
-TOKENIZER_FILE = "./saved/combined_vocab.json"  # vocab.json file
+TOKENIZER_FILE = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(TOKENIZER_FILE_LINK))  # vocab.json file
+# TOKENIZER_FILE = "./saved/combined_vocab.json"  # vocab.json file
 XTTS_CHECKPOINT = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(XTTS_CHECKPOINT_LINK))  # model.pth file
 
 # download XTTS v2.0 files if needed
 if not os.path.isfile(XTTS_CHECKPOINT):
     print(" > Downloading XTTS v2.0 files!")
     ModelManager._download_model_files(
-        [XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
+        [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
     )
 
 
@@ -125,7 +126,7 @@ def main():
         # Optimizer values like tortoise, pytorch implementation with modifications to not apply WD to non-weight parameters.
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
-        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2},
+        optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2, "fused": True},
         lr=8e-06,  # learning rate
         lr_scheduler="MultiStepLR",
         # it was adjusted accordly for the new step scheme
@@ -199,6 +200,7 @@ def main():
             skip_train_epoch=False,
             start_with_eval=START_WITH_EVAL,
             grad_accum_steps=GRAD_ACUMM_STEPS,
+            use_accelerate=True,
         ),
         config,
         output_path=OUT_PATH,

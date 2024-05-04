@@ -74,7 +74,6 @@ class GPTTrainer(BaseTTS):
         """
         super().__init__(config, ap=None, tokenizer=None)
         self.config = config
-        self.module = self
         # init XTTS model
         self.xtts = Xtts(self.config)
         # create the tokenizer with the target vocabulary

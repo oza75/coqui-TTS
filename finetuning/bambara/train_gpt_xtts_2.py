@@ -1,5 +1,6 @@
 import os
 
+import torch
 from trainer import Trainer, TrainerArgs
 
 from TTS.config.shared_configs import BaseDatasetConfig
@@ -183,6 +184,7 @@ def main():
 
     # init the model from config
     model = GPTTrainer.init_from_config(config)
+    model = torch.compile(model, fullgraph=True)
 
     # load training samples
     train_samples, eval_samples = load_tts_samples(
@@ -200,7 +202,7 @@ def main():
             skip_train_epoch=False,
             start_with_eval=START_WITH_EVAL,
             grad_accum_steps=GRAD_ACUMM_STEPS,
-            use_accelerate=True,
+            use_accelerate=False,
         ),
         config,
         output_path=OUT_PATH,

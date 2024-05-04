@@ -83,7 +83,7 @@ class XTTSDataset(torch.utils.data.Dataset):
             try:
                 tseq, _, wav, _, _, _ = self.load_item(sample)
             except Exception as e:
-                raise e
+                print("Exception while loading : ", str(e))
                 continue
             # Basically, this audio file is nonexistent or too long to be supported by the dataset.
             if (
@@ -110,10 +110,10 @@ class XTTSDataset(torch.utils.data.Dataset):
         audiopath = sample["audio_file"]
         wav = load_audio(audiopath, self.sample_rate)
         if text is None or len(text.strip()) == 0:
-            raise ValueError
+            raise ValueError("Empty text")
         if wav is None or wav.shape[-1] < (0.5 * self.sample_rate):
             # Ultra short clips are also useless (and can cause problems within some models).
-            raise ValueError
+            raise ValueError("Wav is ultra short")
 
         if self.use_masking_gt_prompt_approach:
             # get a slice from GT to condition the model

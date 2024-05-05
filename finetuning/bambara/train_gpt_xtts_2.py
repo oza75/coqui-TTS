@@ -94,7 +94,7 @@ def main():
         gpt_start_audio_token=1024,
         gpt_stop_audio_token=1025,
         gpt_use_masking_gt_prompt_approach=True,
-        gpt_use_perceiver_resampler=True,
+        gpt_use_perceiver_resampler=True
     )
     # define audio config
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
@@ -133,6 +133,9 @@ def main():
         # it was adjusted accordly for the new step scheme
         lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
         transliterate_bambara=False,
+        temperature=0.6,
+        sound_norm_refs=True,
+        length_penalty=-1.0,
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",

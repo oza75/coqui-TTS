@@ -513,7 +513,7 @@ class Xtts(BaseTTS):
         top_k=50,
         top_p=0.85,
         do_sample=True,
-        num_beams=1,
+        num_beams=5,
         speed=1.0,
         enable_text_splitting=False,
         **hf_generate_kwargs,

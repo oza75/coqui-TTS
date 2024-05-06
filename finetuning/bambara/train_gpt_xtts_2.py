@@ -10,7 +10,7 @@ from TTS.utils.manage import ModelManager
 from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter, build_reference_audios_dict
 
 # Logging parameters
-RUN_NAME = "xtts_lr_8e-06_epochs_20"
+RUN_NAME = "xtts_lr_4e-06_epochs_40"
 PROJECT_NAME = "BAM_FINE_TUNING_3"
 DASHBOARD_LOGGER = "wandb"
 LOGGER_URI = None
@@ -19,10 +19,10 @@ LOGGER_URI = None
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run", "training")
 
 # Training Parameters
-OPTIMIZER_WD_ONLY_ON_WEIGHTS = True  # for multi-gpu training please make it False
+OPTIMIZER_WD_ONLY_ON_WEIGHTS = False  # for multi-gpu training please make it False
 START_WITH_EVAL = True  # if True it will star with evaluation
-BATCH_SIZE = 3  # set here the batch size
-GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
+BATCH_SIZE = 12  # set here the batch size
+GRAD_ACUMM_STEPS = 21  # set here the grad accumulation steps
 # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
 
 # Define here the dataset that you want to use for the fine-tuning on.
@@ -116,9 +116,9 @@ def main():
         eval_batch_size=BATCH_SIZE,
         num_loader_workers=8,
         eval_split_max_size=256,
-        print_step=50,
+        print_step=100,
         plot_step=100,
-        log_model_step=1000,
+        log_model_step=1194,
         save_step=10000,
         save_n_checkpoints=1,
         save_checkpoints=True,
@@ -128,14 +128,14 @@ def main():
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
         optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2, "fused": True},
-        lr=8e-06,  # learning rate
-        lr_scheduler="MultiStepLR",
+        lr=5e-06,  # learning rate
+        # lr_scheduler="MultiStepLR",
+        lr_scheduler="ExponentialLR",
         # it was adjusted accordly for the new step scheme
-        lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
+        # lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
+        lr_scheduler_params={"gamma": 0.95, "last_epoch": -1},
         transliterate_bambara=False,
-        temperature=0.6,
         sound_norm_refs=True,
-        length_penalty=-1.0,
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",

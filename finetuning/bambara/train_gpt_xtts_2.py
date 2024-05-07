@@ -41,7 +41,6 @@ DATASETS_CONFIG_LIST = [config_dataset]
 CHECKPOINTS_OUT_PATH = os.path.join(OUT_PATH, "XTTS_v2.0_original_model_files/")
 os.makedirs(CHECKPOINTS_OUT_PATH, exist_ok=True)
 
-
 # DVAE files
 DVAE_CHECKPOINT_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/dvae.pth"
 MEL_NORM_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/mel_stats.pth"
@@ -54,7 +53,6 @@ MEL_NORM_FILE = os.path.join(CHECKPOINTS_OUT_PATH, os.path.basename(MEL_NORM_LIN
 if not os.path.isfile(DVAE_CHECKPOINT) or not os.path.isfile(MEL_NORM_FILE):
     print(" > Downloading DVAE files!")
     ModelManager._download_model_files([MEL_NORM_LINK, DVAE_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True)
-
 
 # Download XTTS v2.0 checkpoint if needed
 TOKENIZER_FILE_LINK = "https://huggingface.co/oza75/bambara-tts/resolve/main/vocab.json"
@@ -72,7 +70,6 @@ if not os.path.isfile(XTTS_CHECKPOINT):
         [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
     )
 
-
 # Training sentences generations
 # speaker reference to be used in training test sentences
 SPEAKER_REFERENCES = build_reference_audios_dict("./reference_audios")
@@ -86,6 +83,8 @@ def main():
         debug_loading_failures=False,
         max_wav_length=255995,  # ~11.6 seconds
         max_text_length=200,
+        gpt_loss_text_ce_weight=0.5,
+        gpt_loss_mel_ce_weight=1.0,
         mel_norm_file=MEL_NORM_FILE,
         dvae_checkpoint=DVAE_CHECKPOINT,
         xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
@@ -136,6 +135,8 @@ def main():
         lr_scheduler_params={"gamma": 0.95, "last_epoch": -1},
         transliterate_bambara=False,
         sound_norm_refs=True,
+        distributed_url="tcp://127.0.0.1:54321",
+        mixed_precision=True,
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",
@@ -201,7 +202,8 @@ def main():
     # init the trainer and 🚀
     trainer = Trainer(
         TrainerArgs(
-            restore_path=None,  # xtts checkpoint is restored via xtts_checkpoint key so no need of restore it using Trainer restore_path parameter
+            restore_path=None,
+            # xtts checkpoint is restored via xtts_checkpoint key so no need of restore it using Trainer restore_path parameter
             skip_train_epoch=False,
             start_with_eval=START_WITH_EVAL,
             grad_accum_steps=GRAD_ACUMM_STEPS,

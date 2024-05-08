@@ -208,47 +208,9 @@ class GPTTrainer(BaseTTS):
             mel_norm_file=self.args.mel_norm_file, sampling_rate=config.audio.dvae_sample_rate
         )
 
-    def get_scheduler(self, optimizer):
-        default_scheduler = get_scheduler(self.config.lr_scheduler, self.config.lr_scheduler_params, optimizer)
-        if not self.config.warmup_steps:
-            return default_scheduler
-
-        warmup_scheduler = linear_schedule_with_warmup(
-            optimizer,
-            start_lr=self.config.warmup_start_lr if self.config.warmup_start_lr else 0.1,
-            end_lr=self.config.lr,
-            total_steps=self.config.warmup_steps
-        )
-
-        return torch.optim.lr_scheduler.SequentialLR(
-            optimizer=optimizer,
-            schedulers=[warmup_scheduler, default_scheduler],
-            milestones=[self.config.warmup_steps]
-        )
-
     @property
     def device(self):
         return next(self.parameters()).device
-
-    def optimize(self, batch, step, batch_n_steps, trainer):
-        # gradient accumulation
-        step_optimizer = True
-        if ((step + 1) % self.grad_accum_steps != 0) and (step + 1 != batch_n_steps):
-            step_optimizer = False
-
-        outputs, loss_dict_new, step_time = trainer.optimize(
-            batch,
-            trainer.model,
-            trainer.optimizer,
-            trainer.scaler,
-            trainer.criterion,
-            trainer.scheduler,
-            trainer.config,
-            step_optimizer=step_optimizer,
-            num_optimizers=1,
-        )
-
-        return outputs, loss_dict_new
 
     def forward(self, text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens):
         """
@@ -513,13 +475,28 @@ class GPTTrainer(BaseTTS):
             parameters=self.xtts.gpt.parameters(),
         )
 
-    def get_scheduler(self, optimizer) -> List:
+    def get_scheduler(self, optimizer):
         """Set the scheduler for the optimizer.
 
         Args:
             optimizer: `torch.optim.Optimizer`.
         """
-        return get_scheduler(self.config.lr_scheduler, self.config.lr_scheduler_params, optimizer)
+        default_scheduler = get_scheduler(self.config.lr_scheduler, self.config.lr_scheduler_params, optimizer)
+        if not self.config.warmup_steps:
+            return default_scheduler
+
+        warmup_scheduler = linear_schedule_with_warmup(
+            optimizer,
+            start_lr=self.config.warmup_start_lr if self.config.warmup_start_lr else 0.1,
+            end_lr=self.config.lr,
+            total_steps=self.config.warmup_steps
+        )
+
+        return torch.optim.lr_scheduler.SequentialLR(
+            optimizer=optimizer,
+            schedulers=[warmup_scheduler, default_scheduler],
+            milestones=[self.config.warmup_steps]
+        )
 
     def load_checkpoint(
             self,

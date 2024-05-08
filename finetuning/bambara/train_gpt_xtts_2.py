@@ -140,7 +140,6 @@ def main():
         transliterate_bambara=False,
         sound_norm_refs=True,
         distributed_url="tcp://127.0.0.1:54321",
-        mixed_precision=True,
         test_sentences=[
             {
                 "text": "Dumuni bɛ taa farikolo fan jumɛn ?",

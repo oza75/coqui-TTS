@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Tuple, Union, Optional, Any
 
 import torch
 import torch.nn as nn
@@ -229,6 +229,26 @@ class GPTTrainer(BaseTTS):
     @property
     def device(self):
         return next(self.parameters()).device
+
+    def optimize(self, batch, step, batch_n_steps, trainer):
+        # gradient accumulation
+        step_optimizer = True
+        if ((step + 1) % self.grad_accum_steps != 0) and (step + 1 != batch_n_steps):
+            step_optimizer = False
+
+        outputs, loss_dict_new, step_time = trainer.optimize(
+            batch,
+            trainer.model,
+            trainer.optimizer,
+            trainer.scaler,
+            trainer.criterion,
+            trainer.scheduler,
+            trainer.config,
+            step_optimizer=step_optimizer,
+            num_optimizers=1,
+        )
+
+        return outputs, loss_dict_new
 
     def forward(self, text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens):
         """

@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 import torch
 import torch.nn as nn
 import torchaudio
 from coqpit import Coqpit
 from torch.nn import functional as F
+from torch.optim.lr_scheduler import SequentialLR, LinearLR
 from torch.utils.data import DataLoader
 from trainer.torch import DistributedSampler
 from trainer.trainer_utils import get_optimizer, get_scheduler
@@ -30,6 +31,8 @@ class GPTTrainerConfig(XttsConfig):
     weighted_loss_multipliers: dict = field(default_factory=lambda: {})
     test_sentences: List[dict] = field(default_factory=lambda: [])
     transliterate_bambara: bool = False
+    warmup_steps: Optional[int] = None
+    warmup_start_lr: float = 0.1
 
 
 @dataclass
@@ -65,6 +68,15 @@ def callback_clearml_load_save(operation_type, model_info):
         return None
 
     return model_info
+
+
+def linear_schedule_with_warmup(optimizer, start_lr, end_lr, total_steps):
+    """Create a scheduler that linearly increases the learning rate."""
+    # Define the lambda function for scaling learning rate
+    lambda_lr = lambda current_step: start_lr + (end_lr - start_lr) * (current_step / total_steps)
+    # Create the LambdaLR scheduler
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_lr)
+    return scheduler
 
 
 class GPTTrainer(BaseTTS):
@@ -194,6 +206,24 @@ class GPTTrainer(BaseTTS):
         # Mel spectrogram extractor for DVAE
         self.torch_mel_spectrogram_dvae = TorchMelSpectrogram(
             mel_norm_file=self.args.mel_norm_file, sampling_rate=config.audio.dvae_sample_rate
+        )
+
+    def get_scheduler(self, optimizer):
+        default_scheduler = get_scheduler(self.config.lr_scheduler, self.config.lr_scheduler_params, optimizer)
+        if not self.config.warmup_steps:
+            return default_scheduler
+
+        warmup_scheduler = linear_schedule_with_warmup(
+            optimizer,
+            start_lr=self.config.warmup_start_lr if self.config.warmup_start_lr else 0.1,
+            end_lr=self.config.lr,
+            total_steps=self.config.warmup_steps
+        )
+
+        return torch.optim.lr_scheduler.SequentialLR(
+            optimizer=optimizer,
+            schedulers=[warmup_scheduler, default_scheduler],
+            milestones=[self.config.warmup_steps]
         )
 
     @property

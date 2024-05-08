@@ -10,7 +10,7 @@ from TTS.utils.manage import ModelManager
 from bambara_training_utils import BambaraGPTTrainer, bambara_dataset_formatter, build_reference_audios_dict
 
 # Logging parameters
-RUN_NAME = "xtts_lr_4e-06_epochs_40"
+RUN_NAME = "xtts_lr_1e-05_mel_loss_1.5_epochs_40"
 PROJECT_NAME = "BAM_FINE_TUNING_3"
 DASHBOARD_LOGGER = "wandb"
 LOGGER_URI = None
@@ -83,8 +83,8 @@ def main():
         debug_loading_failures=False,
         max_wav_length=255995,  # ~11.6 seconds
         max_text_length=200,
-        gpt_loss_text_ce_weight=0.5,
-        gpt_loss_mel_ce_weight=1.0,
+        gpt_loss_text_ce_weight=0.01,
+        gpt_loss_mel_ce_weight=1.5,
         mel_norm_file=MEL_NORM_FILE,
         dvae_checkpoint=DVAE_CHECKPOINT,
         xtts_checkpoint=XTTS_CHECKPOINT,  # checkpoint path of the model that you want to fine-tune
@@ -127,12 +127,14 @@ def main():
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
         optimizer_params={"betas": [0.9, 0.96], "eps": 1e-8, "weight_decay": 1e-2, "fused": True},
-        lr=5e-06,  # learning rate
+        lr=1e-05,  # learning rate
         # lr_scheduler="MultiStepLR",
         lr_scheduler="ExponentialLR",
+        warmup_steps=1193 * 3,
+        warmup_start_lr=0.1,
         # it was adjusted accordly for the new step scheme
         # lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
-        lr_scheduler_params={"gamma": 0.95, "last_epoch": -1},
+        lr_scheduler_params={"gamma": 0.01, "last_epoch": -1},
         transliterate_bambara=False,
         sound_norm_refs=True,
         distributed_url="tcp://127.0.0.1:54321",
@@ -188,7 +190,7 @@ def main():
 
     # init the model from config
     model = GPTTrainer.init_from_config(config)
-    model = torch.compile(model, fullgraph=True)
+    # model = torch.compile(model, fullgraph=True)
 
     # load training samples
     train_samples, eval_samples = load_tts_samples(

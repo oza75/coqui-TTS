@@ -289,8 +289,10 @@ class GPT(nn.Module):
         enc = gpt_out.last_hidden_state[:, offset:]
         enc = self.final_norm(enc)
 
+        text_latents, mel_latents = enc[:, : first_inputs.shape[1]], enc[:, -second_inputs.shape[1]:]
+
         if return_latent:
-            return enc[:, : first_inputs.shape[1]], enc[:, -second_inputs.shape[1] :]
+            return text_latents, mel_latents
 
         first_logits = enc[:, : first_inputs.shape[1]]
         first_logits = first_head(first_logits)
@@ -299,7 +301,7 @@ class GPT(nn.Module):
             second_logits = enc[:, -second_inputs.shape[1] :]
             second_logits = second_head(second_logits)
             second_logits = second_logits.permute(0, 2, 1)
-            return first_logits, second_logits
+            return first_logits, second_logits, mel_latents
         else:
             return first_logits
 
@@ -508,7 +510,7 @@ class GPT(nn.Module):
         if self.training:
             sub = -1
 
-        text_logits, mel_logits = self.get_logits(
+        text_logits, mel_logits, mel_latents = self.get_logits(
             text_emb,
             self.text_head,
             mel_emb,
@@ -552,7 +554,7 @@ class GPT(nn.Module):
         loss_mel = F.cross_entropy(
             mel_logits, mel_targets.long(), ignore_index=-1, label_smoothing=self.label_smoothing
         )
-        return loss_text.mean(), loss_mel.mean(), mel_logits
+        return loss_text.mean(), loss_mel.mean(), mel_logits, mel_latents, attn_mask_mel
 
     def inference(self, cond_latents, text_inputs, **hf_generate_kwargs):
         self.compute_embeddings(cond_latents, text_inputs)

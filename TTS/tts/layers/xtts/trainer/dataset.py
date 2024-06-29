@@ -5,6 +5,7 @@ import sys
 import torch
 import torch.nn.functional as F
 import torch.utils.data
+import torchaudio
 
 from TTS.tts.models.xtts import load_audio
 
@@ -179,7 +180,10 @@ class XTTSDataset(torch.utils.data.Dataset):
                 )
             self.failed_samples.add(sample_id)
             return self[1]
-
+        conditioning = cond.unsqueeze(1)
+        cond_16k = torchaudio.functional.resample(cond, self.sample_rate, 16000) \
+            if self.sample_rate != 16000 \
+            else cond
         res = {
             # 'real_text': text,
             "text": tseq,
@@ -187,7 +191,8 @@ class XTTSDataset(torch.utils.data.Dataset):
             "wav": wav,
             "wav_lengths": torch.tensor(wav.shape[-1], dtype=torch.long),
             "filenames": audiopath,
-            "conditioning": cond.unsqueeze(1),
+            "conditioning": conditioning,
+            "cond_16k": cond_16k,
             "cond_lens": torch.tensor(cond_len, dtype=torch.long)
             if cond_len is not torch.nan
             else torch.tensor([cond_len]),

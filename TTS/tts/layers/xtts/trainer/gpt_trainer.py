@@ -22,6 +22,31 @@ from TTS.tts.models.xtts import Xtts, XttsArgs, XttsAudioConfig
 from TTS.utils.io import load_fsspec
 
 
+def align_and_pad_waveforms(reference, generated, pad_value=10):
+    max_len = max(reference.shape[-1], generated.shape[-1])
+    if generated.shape[-1] < max_len:
+        # Pad the generated waveform if it's shorter
+        padding = max_len - generated.shape[-1]
+        generated = F.pad(generated, (0, padding), "constant", pad_value)
+    if reference.shape[-1] < max_len:
+        # Pad the reference waveform if it's shorter
+        padding = max_len - reference.shape[-1]
+        reference = F.pad(reference, (0, padding), "constant", pad_value)
+    return reference, generated
+
+
+def compute_waveform_loss(references, generateds, pad_value=10):
+    losses = []
+    for reference, generated in zip(references, generateds):
+        aligned_reference, aligned_generated = align_and_pad_waveforms(reference, generated, pad_value)
+        loss = F.mse_loss(aligned_reference, aligned_generated, reduction='mean')
+        losses.append(loss)
+
+    # Compute the mean loss across all waveform pairs
+    mean_loss = torch.mean(torch.stack(losses))
+    return mean_loss
+
+
 @dataclass
 class GPTTrainerConfig(XttsConfig):
     lr: float = 5e-06
@@ -212,7 +237,10 @@ class GPTTrainer(BaseTTS):
     def device(self):
         return next(self.parameters()).device
 
-    def forward(self, text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens):
+    def forward(
+            self, text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens, orig_wav,
+            cond_16k
+    ):
         """
         Forward pass that uses both text and voice in either text conditioning mode or voice conditioning mode
         (actuated by `text_first`).
@@ -225,7 +253,7 @@ class GPTTrainer(BaseTTS):
         cond_idxs: cond start and end indexs, (b, 2)
         cond_lens: long tensor, (b,)
         """
-        losses = self.xtts.gpt(
+        loss_text, loss_mel, mel_logits, mel_latents, mel_attn_masks = self.xtts.gpt(
             text_inputs,
             text_lengths,
             audio_codes,
@@ -234,7 +262,30 @@ class GPTTrainer(BaseTTS):
             cond_idxs=cond_idxs,
             cond_lens=cond_lens,
         )
-        return losses
+
+        with torch.no_grad():
+            generated_wavs = []
+            for idx, latent in enumerate(mel_latents):
+                speaker_emb = self.hifigan_decoder.speaker_encoder.forward(
+                    cond_16k[idx].unsqueeze(dim=0), l2_norm=True
+                ).unsqueeze(-1)
+
+                valid_length = mel_attn_masks[idx].sum().item()
+                valid_latents = mel_latents.detach()[idx, :valid_length, :].unsqueeze(dim=0)
+                wav = self.hifigan_decoder(valid_latents, g=speaker_emb)
+                wav = wav.squeeze()
+
+                if self.config.output_sample_rate != self.config.input_sample_rate:
+                    wav = torchaudio.functional.resample(
+                        wav, self.config.output_sample_rate,
+                        self.config.input_sample_rate
+                    )
+
+                generated_wavs.append(wav)
+
+        wav_loss = compute_waveform_loss(orig_wav, generated_wavs)
+
+        return loss_text, loss_mel, wav_loss, mel_logits
 
     @torch.no_grad()
     def test_run(self, assets) -> Tuple[Dict, Dict]:  # pylint: disable=W0613
@@ -304,7 +355,7 @@ class GPTTrainer(BaseTTS):
         batch["audio_codes"] = codes
         # delete useless batch tensors
         del batch["padded_text"]
-        del batch["wav"]
+        # del batch["wav"]
         del batch["conditioning"]
         return batch
 
@@ -317,13 +368,16 @@ class GPTTrainer(BaseTTS):
         wav_lengths = batch["wav_lengths"]
         cond_idxs = batch["cond_idxs"]
         cond_lens = batch["cond_lens"]
+        cond_16k = batch["cond_16k"]
+        wav = batch["wav"]
 
-        loss_text, loss_mel, _ = self.forward(
-            text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens
+        loss_text, loss_mel, wav_loss, _ = self.forward(
+            text_inputs, text_lengths, audio_codes, wav_lengths, cond_mels, cond_idxs, cond_lens, wav, cond_16k
         )
         loss_dict["loss_text_ce"] = loss_text * self.args.gpt_loss_text_ce_weight
         loss_dict["loss_mel_ce"] = loss_mel * self.args.gpt_loss_mel_ce_weight
-        loss_dict["loss"] = loss_dict["loss_text_ce"] + loss_dict["loss_mel_ce"]
+        loss_dict["wav_loss"] = wav_loss * (self.args.gpt_loss_mel_ce_weight + 0.01)
+        loss_dict["loss"] = loss_dict["loss_text_ce"] + loss_dict["loss_mel_ce"] + loss_dict["wav_loss"]
         return {"model_outputs": None}, loss_dict
 
     def eval_step(self, batch, criterion):
